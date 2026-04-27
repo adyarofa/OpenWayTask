@@ -1,6 +1,8 @@
 package com.openway.gmail.pages;
 
-import com.openway.gmail.config.TestConfig;
+import java.time.Duration;
+import java.util.List;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -10,8 +12,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.util.List;
+import com.openway.gmail.config.TestConfig;
 
 /**
  * Page Object for the Gmail Inbox.
@@ -29,23 +30,30 @@ public class InboxPage {
     private final WebDriverWait wait;
 
     // Locators for inbox elements
-    // Gmail uses dynamic class names, so we rely on structural/attribute selectors
+    // Gmail uses dynamic class names and structure that changes frequently
+    // We use multiple stable selector strategies with fallbacks
 
-    // All email rows (both read and unread)
+    // All email rows - Gmail uses class 'zA' on each thread row
     private static final By EMAIL_ROWS = By.cssSelector("tr.zA");
-    // Unread email rows - Gmail marks unread emails with "zE" class
-    private static final By UNREAD_EMAIL_ROWS = By.cssSelector("tr.zE");
+    // Fallback selector
+    private static final By EMAIL_ROWS_FALLBACK = By.cssSelector("div[role='main'] tr[jsmodel]");
 
-    // Checkbox for selecting emails
-    private static final By EMAIL_CHECKBOX = By.cssSelector("div[role='checkbox']");
+    // Unread email rows - Gmail adds class 'zE' to unread rows
+    private static final By UNREAD_EMAIL_ROWS = By.cssSelector("tr.zA.zE");
 
-    // Delete button (trash icon) in toolbar - multiple possible selectors
-    private static final By DELETE_BUTTON = By.cssSelector("div[act='7']");
-    private static final By DELETE_BUTTON_ALT = By.cssSelector("button[aria-label='Delete']");
-    private static final By DELETE_BUTTON_TITLE = By.cssSelector("[title='Delete']");
-
+    // Checkbox for selecting an email row (inside the row)
+    private static final By EMAIL_CHECKBOX = By.cssSelector("td.oZ-jc div[role='checkbox'], td.PF div[role='checkbox']");
+    
+    // Delete button locators - multiple strategies with fallbacks
+    private static final By DELETE_BUTTON = By.xpath(
+        "//div[@aria-label='Delete'] | //button[@aria-label='Delete'] | " +
+        "//div[@title='Delete'] | //button[@title='Delete'] | " +
+        "//div[contains(@aria-label, 'Delete')] | //button[contains(@aria-label, 'Delete')]"
+    );
+    private static final By DELETE_BUTTON_ALT = By.cssSelector("[data-tooltip='Delete'], [aria-label='Delete'], [title='Delete']");
+    
     // Back to inbox button (when viewing an email)
-    private static final By BACK_BUTTON = By.cssSelector("div[act='19']");
+    private static final By BACK_BUTTON = By.xpath("//div[@aria-label='Back'] | //button[@aria-label='Back']");
 
     public InboxPage(WebDriver driver) {
         this.driver = driver;
@@ -58,11 +66,21 @@ public class InboxPage {
     public InboxPage navigateToInbox() {
         logger.info("Navigating to Inbox...");
         driver.get("https://mail.google.com/mail/u/0/#inbox");
+        
+        // Wait for email rows to be visible (indicating inbox is loaded)
         try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(EMAIL_ROWS));
+            logger.info("Inbox content loaded successfully.");
+        } catch (Exception e) {
+            logger.warn("Timeout waiting for inbox content: {}. Attempting with fallback selector.", e.getMessage());
+            try {
+                wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(EMAIL_ROWS_FALLBACK));
+                logger.info("Inbox loaded with fallback selector.");
+            } catch (Exception e2) {
+                logger.warn("Could not load inbox with either selector: {}", e2.getMessage());
+            }
         }
+        
         logger.info("Navigated to Inbox.");
         return this;
     }
@@ -74,28 +92,47 @@ public class InboxPage {
      */
     public List<WebElement> getAllEmailRows() {
         try {
-            wait.until(ExpectedConditions.presenceOfElementLocated(EMAIL_ROWS));
-            Thread.sleep(1000);
+            // Wait for email rows to be visible and interactive
+            WebDriverWait longWait = new WebDriverWait(driver, Duration.ofSeconds(TestConfig.LONG_TIMEOUT_SECONDS));
+            longWait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(EMAIL_ROWS));
+            logger.info("Email rows are visible.");
         } catch (Exception e) {
-            logger.warn("Timeout waiting for email rows: {}", e.getMessage());
+            logger.warn("Primary email row selector failed: {}. Trying fallback...", e.getMessage());
+            try {
+                WebDriverWait longWait = new WebDriverWait(driver, Duration.ofSeconds(TestConfig.LONG_TIMEOUT_SECONDS));
+                longWait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(EMAIL_ROWS_FALLBACK));
+                logger.info("Email rows loaded with fallback selector.");
+            } catch (Exception e2) {
+                logger.error("Could not load email rows with either selector: {}", e2.getMessage());
+            }
         }
+        
         return driver.findElements(EMAIL_ROWS);
     }
 
     /**
      * Get all unread email rows in the inbox.
-     * Gmail marks unread emails with a specific CSS class (zE for unread vs yO for read).
+     * Gmail marks unread emails with specific CSS classes that may change.
      *
      * @return list of WebElements representing unread email rows
      */
     public List<WebElement> getUnreadEmailRows() {
         try {
-            Thread.sleep(2000);
+            // Wait for unread emails to be visible (they have different styling)
+            WebDriverWait longWait = new WebDriverWait(driver, Duration.ofSeconds(TestConfig.LONG_TIMEOUT_SECONDS));
+            
+            // Custom condition: wait for at least one unread email OR timeout gracefully
+            longWait.until(d -> {
+                List<WebElement> unreadRows = d.findElements(UNREAD_EMAIL_ROWS);
+                return !unreadRows.isEmpty();
+            });
+            
             List<WebElement> unreadRows = driver.findElements(UNREAD_EMAIL_ROWS);
             logger.info("Found {} unread email(s) in inbox.", unreadRows.size());
             return unreadRows;
+            
         } catch (Exception e) {
-            logger.warn("Error getting unread emails: {}", e.getMessage());
+            logger.warn("No unread emails detected or timeout waiting for them: {}. Returning empty list.", e.getMessage());
             return List.of();
         }
     }
@@ -110,58 +147,50 @@ public class InboxPage {
      */
     public String getEmailSubject(WebElement emailRow) {
         try {
-            // Use JavaScript to find the subject text within the row.
-            // Gmail structures emails with multiple span elements.
-            // The subject is typically in a span with data-thread-id or
-            // within specific nested structures.
             String subject = (String) ((JavascriptExecutor) driver).executeScript(
                     "var row = arguments[0];" +
-                    // Try multiple strategies to find the subject
-                    // Strategy 1: Look for span.bqe (subject span in some Gmail versions)
-                    "var el = row.querySelector('span.bqe');" +
-                    "if (el && el.textContent.trim()) return el.textContent.trim();" +
-                    // Strategy 2: Look for span.bog (subject span in other versions)
-                    "el = row.querySelector('span.bog');" +
-                    "if (el && el.textContent.trim()) return el.textContent.trim();" +
-                    // Strategy 3: Look for span.y2 (yet another version)
-                    "el = row.querySelector('span.y2');" +
-                    "if (el && el.textContent.trim()) return el.textContent.trim();" +
-                    // Strategy 4: Look for the subject in the specific TD cell structure
-                    // The subject is usually in the 5th-6th td cell
-                    "var tds = row.querySelectorAll('td');" +
-                    "for (var i = 3; i < tds.length; i++) {" +
-                    "  var spans = tds[i].querySelectorAll('span');" +
-                    "  for (var j = 0; j < spans.length; j++) {" +
-                    "    var txt = spans[j].textContent.trim();" +
-                    "    if (txt.length > 2 && !txt.match(/^\\d{1,2}[:/]/) && " +
-                    "        !txt.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/) && " +
-                    "        txt !== 'me' && txt !== 'Inbox') {" +
-                    "      return txt;" +
-                    "    }" +
+                    "var ariaLabel = row.getAttribute('aria-label');" +
+                    "if (ariaLabel && ariaLabel.trim().length > 0) {" +
+                    "  return ariaLabel.split(', ').slice(1).join(', ');" +
+                    "}" +
+                    "var spans = row.querySelectorAll('span');" +
+                    "for (var s = 0; s < spans.length; s++) {" +
+                    "  var txt = spans[s].textContent.trim();" +
+                    "  if (txt.length > 3 && txt.length < 500 && " +
+                    "      !txt.match(/^\\d{1,2}:\\d{2}/) && " +
+                    "      !txt.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/) && " +
+                    "      !txt.match(/^\\d{1,2}\\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/) && " +
+                    "      txt !== 'Inbox' && txt !== 'me' && txt !== 'to me' && " +
+                    "      !txt.match(/^\\d+\\s+(message|email|unread)/) && " +
+                    "      spans[s].offsetParent !== null) {" +
+                    "    return txt;" +
                     "  }" +
                     "}" +
-                    // Strategy 5: Get all text from the row and extract the middle portion
-                    "var allSpans = row.querySelectorAll('span[id]');" +
-                    "for (var k = 0; k < allSpans.length; k++) {" +
-                    "  var t = allSpans[k].textContent.trim();" +
-                    "  if (t.length > 5) return t;" +
+                    "var tds = row.querySelectorAll('td');" +
+                    "for (var i = 0; i < tds.length; i++) {" +
+                    "  var tdText = tds[i].textContent.trim();" +
+                    "  if (tdText.length > 5 && tdText.length < 500 && " +
+                    "      !tdText.match(/^\\d/) && " +
+                    "      tds[i].offsetParent !== null) {" +
+                    "    return tdText;" +
+                    "  }" +
+                    "}" +
+                    "var allText = row.textContent.trim();" +
+                    "if (allText.length > 0) {" +
+                    "  return allText.substring(0, 200);" +
                     "}" +
                     "return '';",
                     emailRow
             );
 
             if (subject != null && !subject.isEmpty()) {
+                logger.debug("Email subject extracted: {}", subject);
                 return subject;
             }
 
-            // Fallback: try to get the aria-label of the row which often contains the subject
-            String ariaLabel = emailRow.getAttribute("aria-label");
-            if (ariaLabel != null && !ariaLabel.isEmpty()) {
-                logger.info("Using aria-label as subject: {}", ariaLabel);
-                return ariaLabel;
-            }
-
+            logger.warn("Could not extract subject text using any strategy");
             return "(Unable to read subject)";
+            
         } catch (Exception e) {
             logger.error("Error reading email subject: {}", e.getMessage());
             return "(Error reading subject)";
@@ -206,31 +235,39 @@ public class InboxPage {
     }
 
     /**
-     * Select an email by clicking its checkbox.
-     * Verifies the checkbox is actually checked after clicking.
+     * Select an email by hovering over the row to reveal the checkbox, then clicking it.
      *
      * @param emailRow the email row to select
      */
     public InboxPage selectEmail(WebElement emailRow) {
         try {
-            WebElement checkbox = emailRow.findElement(EMAIL_CHECKBOX);
-            String checkedBefore = checkbox.getAttribute("aria-checked");
-            logger.info("Checkbox state before click: {}", checkedBefore);
+            // Hover over the row so Gmail reveals the checkbox
+            new org.openqa.selenium.interactions.Actions(driver)
+                    .moveToElement(emailRow)
+                    .perform();
+            Thread.sleep(400);
 
-            checkbox.click();
+            // Try the scoped checkbox first, then fall back to any checkbox in the row
+            WebElement checkbox;
+            try {
+                checkbox = emailRow.findElement(EMAIL_CHECKBOX);
+            } catch (Exception ex) {
+                checkbox = emailRow.findElement(By.cssSelector("div[role='checkbox']"));
+            }
+
+            // Click via JS to avoid interception by overlays
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
             Thread.sleep(500);
 
-            // Verify checkbox is now checked
             String checkedAfter = checkbox.getAttribute("aria-checked");
             logger.info("Checkbox state after click: {}", checkedAfter);
 
-            if ("true".equals(checkedAfter)) {
-                logger.info("Email selected successfully (checkbox is checked).");
+            if (!"true".equals(checkedAfter)) {
+                logger.warn("Checkbox not marked checked after click — retrying normal click...");
+                checkbox.click();
+                Thread.sleep(400);
             } else {
-                // Try clicking again with JS
-                logger.warn("Checkbox not checked, retrying with JS...");
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", checkbox);
-                Thread.sleep(500);
+                logger.info("Email selected successfully.");
             }
         } catch (Exception e) {
             logger.error("Error selecting email: {}", e.getMessage());
@@ -239,47 +276,113 @@ public class InboxPage {
     }
 
     /**
-     * Delete selected emails using the '#' keyboard shortcut.
-     * This is more reliable than clicking the toolbar delete button
-     * because Gmail's toolbar button selectors change across versions.
+     * Delete selected emails from the INBOX view (after checkbox selection).
+     * The toolbar delete button appears with aria-label="Delete" only when
+     * one or more email rows are checked.
      */
     public InboxPage clickDeleteButton() {
         try {
-            // Wait for toolbar to update after selection
-            Thread.sleep(1000);
+            Thread.sleep(800);
 
-            // Primary method: use keyboard shortcut '#' to delete
-            // This requires Gmail keyboard shortcuts to be enabled (they are by default)
-            org.openqa.selenium.interactions.Actions actions =
-                    new org.openqa.selenium.interactions.Actions(driver);
-            actions.sendKeys("#").perform();
-            logger.info("Delete performed via '#' keyboard shortcut.");
+            // Click the toolbar Delete button that appears after row selection
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            WebElement deleteBtn = shortWait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//div[@aria-label='Delete' and not(@style='display:none')] | " +
+                             "//button[@aria-label='Delete' and not(@style='display:none')]")
+            ));
+            deleteBtn.click();
+            logger.info("Delete button clicked via toolbar.");
+            Thread.sleep(1500);
 
-            Thread.sleep(2000);
+        } catch (Exception e) {
+            logger.error("Error clicking inbox delete button: {}", e.getMessage());
+        }
+        return this;
+    }
 
-            // If keyboard shortcut didn't work, try clicking the toolbar button
-            // Check if a notification appeared (indicates success)
-            boolean notificationShown = !driver.findElements(
-                    By.cssSelector("div.vh, div.bAq, span.bAq")).isEmpty();
+    /**
+     * Delete the currently open email from within the email view.
+     * Inside an open email, Gmail's delete button has aria-label="Move to Trash",
+     * not "Delete" — a different label from the inbox toolbar button.
+     */
+    public InboxPage clickDeleteButtonInEmailView() {
+        try {
+            Thread.sleep(800);
 
-            if (!notificationShown) {
-                logger.warn("No notification detected after '#'. Trying toolbar button...");
+            // Strategy 1: "Move to Trash" label (Gmail's label inside email view)
+            try {
+                WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+                WebElement deleteBtn = shortWait.until(ExpectedConditions.elementToBeClickable(
+                        By.xpath("//div[@aria-label='Move to Trash'] | //button[@aria-label='Move to Trash'] | " +
+                                 "//div[@data-tooltip='Move to Trash'] | //button[@data-tooltip='Move to Trash']")
+                ));
+                deleteBtn.click();
+                logger.info("'Move to Trash' button clicked (Strategy 1).");
+                Thread.sleep(1500);
+                return this;
+            } catch (Exception e1) {
+                logger.warn("'Move to Trash' button not found, trying JS scan (Strategy 2)...");
+            }
 
-                // Try clicking delete button via JS with broader selectors
-                ((JavascriptExecutor) driver).executeScript(
-                        "var btns = document.querySelectorAll(" +
-                        "  '[aria-label=\"Delete\"], [data-tooltip=\"Delete\"], [title=\"Delete\"]');" +
-                        "for (var i = 0; i < btns.length; i++) {" +
-                        "  var r = btns[i].getBoundingClientRect();" +
-                        "  if (r.width > 0 && r.height > 0) { btns[i].click(); break; }" +
-                        "}"
-                );
-                logger.info("Clicked toolbar delete button as fallback.");
-                Thread.sleep(2000);
+            // Strategy 2: JS scan for any trash/delete button visible on screen
+            boolean clicked = (Boolean) ((JavascriptExecutor) driver).executeScript(
+                "var labels = ['Move to Trash', 'Delete', 'Trash'];" +
+                "for (var l = 0; l < labels.length; l++) {" +
+                "  var btns = document.querySelectorAll(" +
+                "    '[aria-label=\"' + labels[l] + '\"], [data-tooltip=\"' + labels[l] + '\"]');" +
+                "  for (var i = 0; i < btns.length; i++) {" +
+                "    var rect = btns[i].getBoundingClientRect();" +
+                "    if (rect.width > 0 && rect.height > 0 && rect.top >= 0) {" +
+                "      btns[i].click(); return true;" +
+                "    }" +
+                "  }" +
+                "}" +
+                "return false;"
+            );
+
+            if (clicked) {
+                logger.info("Delete button clicked via JS scan (Strategy 2).");
+                Thread.sleep(1500);
+            } else {
+                logger.warn("Could not find delete button inside email view.");
             }
 
         } catch (Exception e) {
-            logger.error("Error during delete: {}", e.getMessage());
+            logger.error("Error clicking email-view delete button: {}", e.getMessage());
+        }
+        return this;
+    }
+
+    /**
+     * Select multiple emails atomically by their indices in a single JS call.
+     * All checkboxes are clicked before Gmail has a chance to re-render the list,
+     * preventing the stale/deselect issue that occurs between sequential selections.
+     *
+     * @param indices 0-based indices of the rows to select
+     */
+    public InboxPage selectMultipleEmailsByIndex(int... indices) {
+        try {
+            // Pass indices as a JS array literal and click all checkboxes in one execution
+            String indicesJson = "[" + java.util.Arrays.toString(indices)
+                    .replace("[", "").replace("]", "") + "]";
+            Long selected = (Long) ((JavascriptExecutor) driver).executeScript(
+                "var indices = " + indicesJson + ";" +
+                "var rows = document.querySelectorAll('tr.zA');" +
+                "var count = 0;" +
+                "for (var i = 0; i < indices.length; i++) {" +
+                "  var idx = indices[i];" +
+                "  if (idx < rows.length) {" +
+                "    var cb = rows[idx].querySelector('div[role=\"checkbox\"]');" +
+                "    if (cb) { cb.click(); count++; }" +
+                "  }" +
+                "}" +
+                "return count;"
+            );
+
+            logger.info("Selected {} email(s) atomically via JS (requested {}).", selected, indices.length);
+            Thread.sleep(600);
+        } catch (Exception e) {
+            logger.error("Error selecting emails by index: {}", e.getMessage());
         }
         return this;
     }
@@ -305,9 +408,9 @@ public class InboxPage {
      */
     public int getEmailCount() {
         try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(EMAIL_ROWS));
+        } catch (Exception e) {
+            logger.debug("Timeout waiting for email rows, but continuing...");
         }
         List<WebElement> rows = driver.findElements(EMAIL_ROWS);
         logger.info("Total visible emails: {}", rows.size());

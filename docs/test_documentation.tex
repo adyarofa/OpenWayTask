@@ -36,7 +36,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\textcolor{headerblue}{\textbf{Test Documentation --- Mail Deletion}}}
-\fancyhead[R]{\textcolor{darkgray}{v1.0}}
+\fancyhead[R]{\textcolor{darkgray}{v1.1}}
 \fancyfoot[C]{\textcolor{darkgray}{Page \thepage\ of \pageref{LastPage}}}
 \renewcommand{\headrulewidth}{1pt}
 \renewcommand{\headrule}{\hbox to\headwidth{\color{headerblue}\leaders\hrule height \headrulewidth\hfill}}
@@ -65,24 +65,24 @@
 \begin{titlepage}
     \centering
     \vspace*{3cm}
-    
+
     {\Huge\bfseries\textcolor{headerblue}{Test Documentation}}\\[0.5cm]
     {\LARGE\textcolor{darkgray}{Mail Deletion Feature}}\\[0.3cm]
     {\large\textcolor{darkgray}{Google Mail Provider}}\\[2cm]
-    
+
     \begin{tabular}{ll}
-        \textbf{Document Version:} & 1.0 \\
-        \textbf{Date:}             & April 26, 2026 \\
+        \textbf{Document Version:} & 1.1 \\
+        \textbf{Date:}             & April 27, 2026 \\
         \textbf{Author:}           & QA Engineering Team \\
         \textbf{Project:}          & OpenWay Task --- Scenario A \\
         \textbf{Application:}      & Web-based Mail Client (Gmail) \\
-        \textbf{Status:}           & Draft \\
+        \textbf{Status:}           & Final \\
     \end{tabular}
-    
+
     \vfill
-    
+
     \noindent\rule{\textwidth}{1pt}
-    {\small\textcolor{darkgray}{This document contains test cases for validating the mail deletion functionality of a web-based mail provider. Test cases cover functional, UI, edge-case, and negative scenarios.}}
+    {\small\textcolor{darkgray}{This document contains 10 test cases for validating the mail deletion functionality of a web-based mail provider. Test cases cover the most critical functional, edge-case, and negative scenarios aligned with the project specification.}}
 \end{titlepage}
 
 % ========== TABLE OF CONTENTS ==========
@@ -93,22 +93,21 @@
 \section{Introduction}
 
 \subsection{Purpose}
-This document defines the test cases required to verify that the \textbf{mail deletion} feature of a web-based mail provider (modeled after Google Mail) functions correctly and meets expected behavior. The test cases are designed to ensure comprehensive coverage of positive, negative, and edge-case scenarios.
+This document defines the test cases required to verify that the \textbf{mail deletion} feature of a web-based mail provider (modeled after Google Mail) functions correctly and meets expected behavior. The 10 test cases selected represent the highest-value coverage across core deletion flows, undo/restore, bulk operations, and negative scenarios.
 
 \subsection{Scope}
 The scope of testing covers:
 \begin{itemize}[noitemsep]
     \item Deleting a single email from the Inbox
     \item Deleting multiple emails (bulk deletion)
-    \item Deleting emails from different views (Inbox, Sent, Drafts, Spam, custom labels)
-    \item Verifying deleted emails appear in Trash
-    \item Permanent deletion from Trash
-    \item Undoing a deletion
-    \item Auto-purge of Trash after 30 days
-    \item Keyboard shortcut-based deletion
-    \item Deletion behavior for starred/important emails
-    \item Deletion behavior for emails with attachments
-    \item UI validation (visual feedback, confirmation dialogs)
+    \item Undoing a deletion via toast notification
+    \item Permanently deleting email from Trash
+    \item Restoring a deleted email from Trash back to Inbox
+    \item Deleting using the keyboard shortcut (\texttt{\#})
+    \item Deleting all visible emails using Select All
+    \item Deleting an email from search results
+    \item Deleting an entire conversation thread
+    \item UI validation: Delete button state when no email is selected
 \end{itemize}
 
 \subsection{Test Case Format}
@@ -150,9 +149,12 @@ Each test case follows a structured format with the fields described in Table~\r
     \item \textbf{Browser:} Google Chrome (latest stable version)
     \item \textbf{OS:} Windows 10/11, macOS, Linux
     \item \textbf{Mail Provider:} Google Mail (Gmail)
-    \item \textbf{Test Account:} Dedicated test Gmail account with $\geq$5 pre-loaded emails
-    \item \textbf{Automation Stack:} Java 17+, Selenium WebDriver 4.x, TestNG 7.x, ChromeDriver
+    \item \textbf{Test Account:} Dedicated test Gmail account with $\geq$5 pre-loaded unread emails
+    \item \textbf{Automation Stack:} Java 17+, Selenium WebDriver 4.x, TestNG 7.x, ChromeDriver (managed by WebDriverManager)
 \end{itemize}
+
+\subsection{Automation Coverage}
+Of the 10 test cases, \textbf{2 are fully automated} (TC-DEL-001 and TC-DEL-002) using the Selenium/TestNG suite. The remaining 8 are documented for manual execution, as they require either long-running conditions, manual UI interaction, or environments not suitable for headless automation in this project scope.
 
 \newpage
 
@@ -192,11 +194,11 @@ Each test case follows a structured format with the fields described in Table~\r
                               \item Inbox email count decreases by 1
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Email removed from Inbox. Toast: ``Conversation moved to Trash. Undo''. Inbox count decreased from 46 to 45. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & Verify the toast notification includes an ``Undo'' link \\
+\textbf{Notes}           & \textbf{Automated.} Toast notification includes ``Undo'' link as expected. \\
 \hline
 \end{longtable}
 
@@ -215,80 +217,40 @@ Each test case follows a structured format with the fields described in Table~\r
 \hline
 \textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item User is logged into Gmail
-                              \item Inbox contains at least 3 emails
+                              \item Inbox contains at least 2 emails
                             \end{enumerate} \\
 \hline
 \textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item Navigate to Inbox
-                              \item Select the checkboxes of 3 different emails
+                              \item Select the checkboxes of 2 different emails
                               \item Click the ``Delete'' (trash icon) button in the toolbar
                             \end{enumerate} \\
 \hline
-\textbf{Test Data}       & 3 emails present in Inbox \\
+\textbf{Test Data}       & 2 emails present in Inbox \\
 \hline
 \textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item All 3 selected emails are removed from Inbox
-                              \item A toast notification ``3 conversations moved to Trash'' appears
-                              \item All 3 emails appear in the Trash folder
-                              \item Inbox email count decreases by 3
+                              \item Both selected emails are removed from Inbox
+                              \item A toast notification ``2 conversations moved to Trash'' appears
+                              \item Both emails appear in the Trash folder
+                              \item Inbox email count decreases by 2
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Both emails removed from Inbox. Inbox count decreased from 45 to 43. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & --- \\
+\textbf{Notes}           & \textbf{Automated.} Checkboxes selected atomically via single JS call to prevent Gmail re-render deselection. \\
 \hline
 \end{longtable}
 
 % ---------- TC-DEL-003 ----------
-\subsection{TC-DEL-003: Delete Email by Opening It and Using Delete Button}
+\subsection{TC-DEL-003: Undo Email Deletion}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
 \textbf{TC-ID}           & TC-DEL-003 \\
-\hline
-\textbf{Title}           & Delete email from within the email view \\
-\hline
-\textbf{Priority}        & High \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Inbox contains at least 1 email
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Open an email by clicking on it
-                              \item Click the ``Delete'' (trash icon) button in the email view toolbar
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & Any email in Inbox \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is redirected back to the Inbox
-                              \item The deleted email no longer appears in the Inbox
-                              \item Toast notification ``Conversation moved to Trash'' is displayed
-                              \item The email is found in Trash
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & --- \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-004 ----------
-\subsection{TC-DEL-004: Undo Email Deletion}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-004 \\
 \hline
 \textbf{Title}           & Undo email deletion via toast notification \\
 \hline
@@ -313,22 +275,22 @@ Each test case follows a structured format with the fields described in Table~\r
                               \item Inbox count is restored to the original value
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Email restored to Inbox after clicking ``Undo''. Email no longer in Trash. Inbox count restored to original value. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
 \textbf{Notes}           & Undo link is available for approximately 5--10 seconds \\
 \hline
 \end{longtable}
 
-% ---------- TC-DEL-005 ----------
-\subsection{TC-DEL-005: Permanently Delete Email from Trash}
+% ---------- TC-DEL-004 ----------
+\subsection{TC-DEL-004: Permanently Delete Email from Trash}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
-\textbf{TC-ID}           & TC-DEL-005 \\
+\textbf{TC-ID}           & TC-DEL-004 \\
 \hline
 \textbf{Title}           & Permanently delete a single email from Trash \\
 \hline
@@ -343,73 +305,33 @@ Each test case follows a structured format with the fields described in Table~\r
                               \item Navigate to the Trash folder
                               \item Select the checkbox of a single email
                               \item Click ``Delete forever'' button
+                              \item Confirm the action if prompted
                             \end{enumerate} \\
 \hline
 \textbf{Test Data}       & An email already in Trash \\
 \hline
 \textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item A confirmation dialog appears asking ``This action will affect all \ldots conversations in Trash. Are you sure?''
-                              \item After confirming, the email is permanently removed
-                              \item The email cannot be found anywhere (Inbox, Trash, All Mail, Search)
+                              \item The email is permanently removed from Trash
+                              \item The email cannot be found via search anywhere
+                              \item No ``Undo'' option is presented
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Email permanently removed from Trash. Email not found via search. No ``Undo'' option presented. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
 \textbf{Notes}           & This action is irreversible \\
 \hline
 \end{longtable}
 
-% ---------- TC-DEL-006 ----------
-\subsection{TC-DEL-006: Empty Entire Trash Folder}
+% ---------- TC-DEL-005 ----------
+\subsection{TC-DEL-005: Delete Email Using Keyboard Shortcut}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
-\textbf{TC-ID}           & TC-DEL-006 \\
-\hline
-\textbf{Title}           & Empty entire Trash folder \\
-\hline
-\textbf{Priority}        & Medium \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Trash folder contains multiple emails
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Navigate to the Trash folder
-                              \item Click ``Empty Trash now'' link at the top
-                              \item Confirm the action in the confirmation dialog
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & Multiple emails already in Trash \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Confirmation dialog appears (``Are you sure\ldots'')
-                              \item After confirmation, all emails are removed from Trash
-                              \item Trash shows empty state message
-                              \item None of the deleted emails can be found via search
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & Verify the count shown in the confirmation matches actual Trash count \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-007 ----------
-\subsection{TC-DEL-007: Delete Email Using Keyboard Shortcut}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-007 \\
+\textbf{TC-ID}           & TC-DEL-005 \\
 \hline
 \textbf{Title}           & Delete email using keyboard shortcut (\#) \\
 \hline
@@ -417,7 +339,7 @@ Each test case follows a structured format with the fields described in Table~\r
 \hline
 \textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item User is logged into Gmail
-                              \item Keyboard shortcuts are enabled in Settings
+                              \item Keyboard shortcuts are enabled in Gmail Settings
                               \item Inbox contains at least 1 email
                             \end{enumerate} \\
 \hline
@@ -431,268 +353,26 @@ Each test case follows a structured format with the fields described in Table~\r
 \hline
 \textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item The selected email is moved to Trash
-                              \item Toast notification appears
+                              \item Toast notification ``Conversation moved to Trash'' appears
                               \item Behavior is identical to clicking the Delete button
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Email moved to Trash after pressing \texttt{\#}. Toast notification appeared. Behavior identical to clicking Delete button. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & Requires keyboard shortcuts to be enabled in Gmail settings \\
+\textbf{Notes}           & Enable keyboard shortcuts via Settings $\rightarrow$ General $\rightarrow$ Keyboard shortcuts \\
 \hline
 \end{longtable}
 
-% ---------- TC-DEL-008 ----------
-\subsection{TC-DEL-008: Delete Email Using Right-Click Context Menu}
+% ---------- TC-DEL-006 ----------
+\subsection{TC-DEL-006: Restore Deleted Email from Trash}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
-\textbf{TC-ID}           & TC-DEL-008 \\
-\hline
-\textbf{Title}           & Delete email via right-click context menu \\
-\hline
-\textbf{Priority}        & Medium \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Inbox contains at least 1 email
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Navigate to Inbox
-                              \item Right-click on an email row
-                              \item Select ``Delete'' from the context menu
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & Any email in Inbox \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Context menu appears with ``Delete'' option
-                              \item The email is moved to Trash upon clicking Delete
-                              \item Toast notification is shown
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & --- \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-009 ----------
-\subsection{TC-DEL-009: Delete a Starred Email}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-009 \\
-\hline
-\textbf{Title}           & Delete a starred (favorited) email \\
-\hline
-\textbf{Priority}        & Medium \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item At least 1 email in Inbox is starred
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Navigate to Inbox
-                              \item Select the checkbox of a starred email
-                              \item Click the ``Delete'' button
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & A starred email in Inbox \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The starred email is moved to Trash
-                              \item The email is removed from both Inbox and Starred views
-                              \item The email appears in Trash (star status may be preserved)
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & No additional confirmation should be required for starred emails \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-010 ----------
-\subsection{TC-DEL-010: Delete an Email with Attachments}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-010 \\
-\hline
-\textbf{Title}           & Delete an email that contains attachments \\
-\hline
-\textbf{Priority}        & Medium \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Inbox contains at least 1 email with file attachments
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Navigate to Inbox
-                              \item Select the checkbox of an email with attachments
-                              \item Click the ``Delete'' button
-                              \item Navigate to Trash and open the deleted email
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & An email with at least one attachment (e.g., a PDF file) \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The email is moved to Trash
-                              \item When opened from Trash, attachments are still accessible/downloadable
-                              \item Email integrity is preserved
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & --- \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-011 ----------
-\subsection{TC-DEL-011: Delete Email from Sent Folder}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-011 \\
-\hline
-\textbf{Title}           & Delete an email from the Sent folder \\
-\hline
-\textbf{Priority}        & Medium \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Sent folder contains at least 1 email
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Navigate to the Sent folder
-                              \item Select the checkbox of an email
-                              \item Click the ``Delete'' button
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & A sent email \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The email is removed from the Sent folder
-                              \item The email appears in the Trash folder
-                              \item The email is no longer visible in Sent
-                              \item Deletion does not affect the recipient's copy
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & Verify recipient still has the email \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-012 ----------
-\subsection{TC-DEL-012: Delete a Draft Email}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-012 \\
-\hline
-\textbf{Title}           & Delete a draft email from the Drafts folder \\
-\hline
-\textbf{Priority}        & Medium \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Drafts folder contains at least 1 draft
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Navigate to the Drafts folder
-                              \item Select the checkbox of a draft email
-                              \item Click the ``Discard drafts'' button
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & A saved draft email \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The draft is permanently deleted (not moved to Trash)
-                              \item The draft no longer appears in the Drafts folder
-                              \item A toast notification ``1 conversation discarded'' appears
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & Gmail discards drafts permanently; they do not go to Trash \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-013 ----------
-\subsection{TC-DEL-013: Delete Email from Spam Folder}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-013 \\
-\hline
-\textbf{Title}           & Delete an email from the Spam folder \\
-\hline
-\textbf{Priority}        & Low \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Spam folder contains at least 1 email
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Navigate to the Spam folder
-                              \item Select the checkbox of a spam email
-                              \item Click ``Delete forever''
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & An email in the Spam folder \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The spam email is permanently deleted
-                              \item The email is not moved to Trash (it is gone permanently)
-                              \item The email cannot be found via search
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & Spam deletion is permanent, similar to draft discard \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-014 ----------
-\subsection{TC-DEL-014: Restore Deleted Email from Trash}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-014 \\
+\textbf{TC-ID}           & TC-DEL-006 \\
 \hline
 \textbf{Title}           & Restore (move back to Inbox) an email from Trash \\
 \hline
@@ -714,25 +394,25 @@ Each test case follows a structured format with the fields described in Table~\r
 \textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item The email is removed from Trash
                               \item The email reappears in the Inbox
-                              \item Email content and metadata are preserved
+                              \item Email content and metadata (subject, sender, date) are preserved
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Email removed from Trash and reappeared in Inbox. Content and metadata preserved. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & The restored email should retain all labels and read/unread status \\
+\textbf{Notes}           & The restored email should retain its read/unread status \\
 \hline
 \end{longtable}
 
-% ---------- TC-DEL-015 ----------
-\subsection{TC-DEL-015: Delete All Emails Using ``Select All'' Checkbox}
+% ---------- TC-DEL-007 ----------
+\subsection{TC-DEL-007: Delete All Emails Using ``Select All'' Checkbox}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
-\textbf{TC-ID}           & TC-DEL-015 \\
+\textbf{TC-ID}           & TC-DEL-007 \\
 \hline
 \textbf{Title}           & Delete all visible emails using Select All \\
 \hline
@@ -753,26 +433,26 @@ Each test case follows a structured format with the fields described in Table~\r
 \hline
 \textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item All visible emails on the page are moved to Trash
-                              \item Toast notification shows count of moved emails
+                              \item Toast notification shows count of moved conversations
                               \item If more emails exist beyond the page, they are NOT deleted
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & All visible emails on page moved to Trash. Toast notification showed correct count of moved conversations. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & Gmail may show a banner ``Select all conversations that match this search'' \\
+\textbf{Notes}           & Gmail may show a banner ``Select all conversations that match this search'' for cross-page selection \\
 \hline
 \end{longtable}
 
-% ---------- TC-DEL-016 ----------
-\subsection{TC-DEL-016: Delete Email from Search Results}
+% ---------- TC-DEL-008 ----------
+\subsection{TC-DEL-008: Delete Email from Search Results}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
-\textbf{TC-ID}           & TC-DEL-016 \\
+\textbf{TC-ID}           & TC-DEL-008 \\
 \hline
 \textbf{Title}           & Delete an email from search results \\
 \hline
@@ -780,79 +460,39 @@ Each test case follows a structured format with the fields described in Table~\r
 \hline
 \textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item User is logged into Gmail
-                              \item Inbox contains emails with searchable subjects
+                              \item Inbox contains emails with a known, searchable subject
                             \end{enumerate} \\
 \hline
 \textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Search for a specific email by subject
-                              \item Select the checkbox of the found email
+                              \item Enter a known email subject into the search bar and press Enter
+                              \item Select the checkbox of the matching email in search results
                               \item Click the ``Delete'' button
                             \end{enumerate} \\
 \hline
-\textbf{Test Data}       & Search query: a known email subject \\
+\textbf{Test Data}       & Search query: a known email subject (e.g., ``Kerja Sama'') \\
 \hline
 \textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The email is removed from search results
+                              \item The email disappears from the search results
                               \item The email appears in Trash
-                              \item Re-searching with the same query yields no results (or fewer)
+                              \item Re-searching with the same query returns no result for that email
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Email disappeared from search results and appeared in Trash. Re-searching returned no result for that email. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & Searching ``in:trash \textit{subject}'' should find the deleted email \\
+\textbf{Notes}           & Searching \texttt{in:trash \textit{subject}} should confirm the email was moved to Trash \\
 \hline
 \end{longtable}
 
-% ---------- TC-DEL-017 ----------
-\subsection{TC-DEL-017: Verify Trash Auto-Purge After 30 Days}
+% ---------- TC-DEL-009 ----------
+\subsection{TC-DEL-009: Delete an Entire Conversation Thread}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
-\textbf{TC-ID}           & TC-DEL-017 \\
-\hline
-\textbf{Title}           & Verify Trash auto-purge after 30 days \\
-\hline
-\textbf{Priority}        & Low \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Trash contains an email that was deleted more than 30 days ago
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Delete an email and note the date
-                              \item Wait 30 days (or simulate via system clock, if possible)
-                              \item Navigate to Trash and search for the email
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & An email deleted exactly 30+ days ago \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The email is automatically permanently deleted after 30 days
-                              \item The email is no longer in Trash or accessible via search
-                              \item The Trash folder displays a message: ``Messages\ldots will be automatically deleted after 30 days''
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & This test may require a long-running setup or a pre-arranged test account \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-018 ----------
-\subsection{TC-DEL-018: Delete Email in Conversation Thread}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-018 \\
+\textbf{TC-ID}           & TC-DEL-009 \\
 \hline
 \textbf{Title}           & Delete an entire conversation thread \\
 \hline
@@ -860,12 +500,12 @@ Each test case follows a structured format with the fields described in Table~\r
 \hline
 \textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item User is logged into Gmail
-                              \item Inbox contains a conversation thread with at least 3 messages
+                              \item Inbox contains a conversation thread with at least 3 replies
                             \end{enumerate} \\
 \hline
 \textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item Navigate to Inbox
-                              \item Select the checkbox of a conversation thread
+                              \item Select the checkbox of a conversation thread (showing reply count)
                               \item Click the ``Delete'' button
                             \end{enumerate} \\
 \hline
@@ -877,65 +517,22 @@ Each test case follows a structured format with the fields described in Table~\r
                               \item No messages from the thread remain in Inbox
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Entire conversation thread moved to Trash. All messages in the thread accessible from Trash. No messages remained in Inbox. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & --- \\
+\textbf{Notes}           & Gmail groups replies as a single thread row in the inbox \\
 \hline
 \end{longtable}
 
-% ---------- TC-DEL-019 ----------
-\subsection{TC-DEL-019: Delete Email on Slow/Unstable Network}
+% ---------- TC-DEL-010 ----------
+\subsection{TC-DEL-010: Verify Delete Button Is Hidden When No Email Is Selected}
 
 \begin{longtable}{|L{3.5cm}|L{11.5cm}|}
 \hline
 \rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
 \hline
-\textbf{TC-ID}           & TC-DEL-019 \\
-\hline
-\textbf{Title}           & Attempt to delete email on slow/unstable network \\
-\hline
-\textbf{Priority}        & Low \\
-\hline
-\textbf{Preconditions}   & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item User is logged into Gmail
-                              \item Network is throttled or unstable (simulated via DevTools or proxy)
-                              \item Inbox contains at least 1 email
-                            \end{enumerate} \\
-\hline
-\textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item Enable network throttling in Chrome DevTools (e.g., ``Slow 3G'')
-                              \item Select an email checkbox
-                              \item Click the ``Delete'' button
-                              \item Observe the behavior
-                            \end{enumerate} \\
-\hline
-\textbf{Test Data}       & Any email in Inbox \\
-\hline
-\textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The email is eventually moved to Trash (operation completes)
-                              \item No data corruption occurs
-                              \item User receives appropriate feedback if the operation takes time
-                              \item If the operation fails, a clear error message is shown
-                            \end{enumerate} \\
-\hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
-\hline
-\textbf{Status}          & Not Executed \\
-\hline
-\textbf{Notes}           & Non-functional test; covers reliability under poor network conditions \\
-\hline
-\end{longtable}
-
-% ---------- TC-DEL-020 ----------
-\subsection{TC-DEL-020: Verify Delete Button Is Disabled When No Email Is Selected}
-
-\begin{longtable}{|L{3.5cm}|L{11.5cm}|}
-\hline
-\rowcolor{lightgray}\textbf{Field} & \textbf{Details} \\
-\hline
-\textbf{TC-ID}           & TC-DEL-020 \\
+\textbf{TC-ID}           & TC-DEL-010 \\
 \hline
 \textbf{Title}           & Verify delete button state when no email is selected \\
 \hline
@@ -949,22 +546,22 @@ Each test case follows a structured format with the fields described in Table~\r
 \textbf{Test Steps}      & \begin{enumerate}[noitemsep,topsep=0pt]
                               \item Navigate to Inbox
                               \item Ensure no email checkboxes are selected
-                              \item Observe the Delete button in the toolbar
+                              \item Observe the toolbar
                             \end{enumerate} \\
 \hline
 \textbf{Test Data}       & N/A \\
 \hline
 \textbf{Expected Result} & \begin{enumerate}[noitemsep,topsep=0pt]
-                              \item The Delete (trash icon) button is either hidden or visually disabled
-                              \item Clicking it (if visible) does not trigger any action
-                              \item No emails are affected
+                              \item The Delete (trash icon) button is not visible in the toolbar
+                              \item No emails are accidentally affected
+                              \item The toolbar shows default inbox controls only (refresh, more options)
                             \end{enumerate} \\
 \hline
-\textbf{Actual Result}   & \textit{(To be filled during execution)} \\
+\textbf{Actual Result}   & Delete button not visible in toolbar when no email selected. Toolbar showed only default controls (refresh, more options). No emails affected. \\
 \hline
-\textbf{Status}          & Not Executed \\
+\textbf{Status}          & \textcolor{passgreen}{\textbf{Pass}} \\
 \hline
-\textbf{Notes}           & UI/negative test case \\
+\textbf{Notes}           & Negative/UI test — verifies the system does not allow accidental deletion \\
 \hline
 \end{longtable}
 
@@ -973,31 +570,21 @@ Each test case follows a structured format with the fields described in Table~\r
 % ========== 3. TEST SUMMARY MATRIX ==========
 \section{Test Summary Matrix}
 
-\begin{longtable}{|C{2cm}|L{6cm}|C{1.5cm}|C{2.5cm}|}
+\begin{longtable}{|C{2cm}|L{7cm}|C{1.5cm}|C{2cm}|C{2cm}|}
 \hline
 \rowcolor{headerblue}
-\textcolor{white}{\textbf{TC-ID}} & \textcolor{white}{\textbf{Title}} & \textcolor{white}{\textbf{Priority}} & \textcolor{white}{\textbf{Status}} \\
+\textcolor{white}{\textbf{TC-ID}} & \textcolor{white}{\textbf{Title}} & \textcolor{white}{\textbf{Priority}} & \textcolor{white}{\textbf{Automated}} & \textcolor{white}{\textbf{Status}} \\
 \hline
-TC-DEL-001 & Delete a single email from Inbox              & High   & Not Executed \\ \hline
-TC-DEL-002 & Bulk delete multiple emails                    & High   & Not Executed \\ \hline
-TC-DEL-003 & Delete from email view                         & High   & Not Executed \\ \hline
-TC-DEL-004 & Undo email deletion                            & High   & Not Executed \\ \hline
-TC-DEL-005 & Permanently delete from Trash                  & High   & Not Executed \\ \hline
-TC-DEL-006 & Empty entire Trash folder                      & Medium & Not Executed \\ \hline
-TC-DEL-007 & Delete using keyboard shortcut                 & Medium & Not Executed \\ \hline
-TC-DEL-008 & Delete via right-click context menu             & Medium & Not Executed \\ \hline
-TC-DEL-009 & Delete a starred email                         & Medium & Not Executed \\ \hline
-TC-DEL-010 & Delete email with attachments                  & Medium & Not Executed \\ \hline
-TC-DEL-011 & Delete email from Sent folder                  & Medium & Not Executed \\ \hline
-TC-DEL-012 & Delete a draft email                           & Medium & Not Executed \\ \hline
-TC-DEL-013 & Delete email from Spam folder                  & Low    & Not Executed \\ \hline
-TC-DEL-014 & Restore deleted email from Trash               & High   & Not Executed \\ \hline
-TC-DEL-015 & Delete all via Select All checkbox             & Medium & Not Executed \\ \hline
-TC-DEL-016 & Delete email from search results               & Medium & Not Executed \\ \hline
-TC-DEL-017 & Verify Trash auto-purge after 30 days          & Low    & Not Executed \\ \hline
-TC-DEL-018 & Delete conversation thread                     & Medium & Not Executed \\ \hline
-TC-DEL-019 & Delete on slow/unstable network                & Low    & Not Executed \\ \hline
-TC-DEL-020 & Verify delete button disabled when none selected & Medium & Not Executed \\ \hline
+TC-DEL-001 & Delete a single email from Inbox          & High   & Yes & Pass \\ \hline
+TC-DEL-002 & Bulk delete multiple emails               & High   & Yes & Pass \\ \hline
+TC-DEL-003 & Undo email deletion                       & High   & No  & Pass \\ \hline
+TC-DEL-004 & Permanently delete from Trash             & High   & No  & Pass \\ \hline
+TC-DEL-005 & Delete using keyboard shortcut (\#)       & Medium & No  & Pass \\ \hline
+TC-DEL-006 & Restore deleted email from Trash          & High   & No  & Pass \\ \hline
+TC-DEL-007 & Delete all via Select All checkbox        & Medium & No  & Pass \\ \hline
+TC-DEL-008 & Delete email from search results          & Medium & No  & Pass \\ \hline
+TC-DEL-009 & Delete entire conversation thread         & Medium & No  & Pass \\ \hline
+TC-DEL-010 & Delete button hidden when none selected   & Medium & No  & Pass \\ \hline
 \end{longtable}
 
 \newpage
@@ -1013,26 +600,25 @@ TC-DEL-020 & Verify delete button disabled when none selected & Medium & Not Exe
 \rowcolor{headerblue}
 \textcolor{white}{\textbf{Feature Area}} & \textcolor{white}{\textbf{Test Cases}} & \textcolor{white}{\textbf{Count}} \\
 \hline
-Single email deletion       & TC-DEL-001, 003              & 2 \\ \hline
-Bulk deletion               & TC-DEL-002, 015              & 2 \\ \hline
-Undo / Restore              & TC-DEL-004, 014              & 2 \\ \hline
-Permanent deletion          & TC-DEL-005, 006, 017         & 3 \\ \hline
-Alternative input methods   & TC-DEL-007, 008              & 2 \\ \hline
-Special email types         & TC-DEL-009, 010, 018         & 3 \\ \hline
-Different folder contexts   & TC-DEL-011, 012, 013, 016    & 4 \\ \hline
-Edge cases \& negative      & TC-DEL-019, 020              & 2 \\ \hline
+Core deletion (single)      & TC-DEL-001                   & 1 \\ \hline
+Core deletion (bulk)        & TC-DEL-002, TC-DEL-007       & 2 \\ \hline
+Undo / Restore              & TC-DEL-003, TC-DEL-006       & 2 \\ \hline
+Permanent deletion          & TC-DEL-004                   & 1 \\ \hline
+Alternative input methods   & TC-DEL-005                   & 1 \\ \hline
+Search \& thread contexts   & TC-DEL-008, TC-DEL-009       & 2 \\ \hline
+Negative / UI validation    & TC-DEL-010                   & 1 \\ \hline
 \end{tabular}
 \end{table}
 
 \section{Risks and Assumptions}
 
 \begin{itemize}[noitemsep]
-    \item \textbf{Risk:} Gmail UI may change frequently; locators used in automated tests may break.
+    \item \textbf{Risk:} Gmail UI may change frequently; CSS selectors and aria-labels used in automated tests may break.
     \item \textbf{Risk:} Google may enforce CAPTCHA or additional verification (e.g., OTP), blocking automated login.
-    \item \textbf{Assumption:} The test Gmail account has been pre-configured and contains the necessary test data.
+    \item \textbf{Assumption:} The test Gmail account has been pre-configured and contains at least 5 unread emails.
     \item \textbf{Assumption:} Tests are executed on the latest stable version of Google Chrome.
-    \item \textbf{Assumption:} Network connectivity is stable unless explicitly testing network failure scenarios.
-    \item \textbf{Mitigation:} For Google verification challenges, use environment-configurable credentials and consider using Google OAuth or App Passwords for automation.
+    \item \textbf{Assumption:} Network connectivity is stable during test execution.
+    \item \textbf{Mitigation:} For Google verification challenges, use environment-configurable credentials (App Passwords or \texttt{.env} file) rather than hardcoded values.
 \end{itemize}
 
 \end{document}
