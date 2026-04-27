@@ -6,10 +6,6 @@ import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
 
-/**
- * Custom TestNG listener for enhanced test reporting and logging.
- * Provides clear, structured log output for each test lifecycle event.
- */
 public class TestListener implements ITestListener {
 
     private static final Logger logger = LoggerFactory.getLogger(TestListener.class);
@@ -65,9 +61,6 @@ public class TestListener implements ITestListener {
         }
     }
 
-    /**
-     * Pad a string to the right with spaces.
-     */
     private String padRight(String text, int length) {
         if (text.length() >= length) {
             return text.substring(0, length);

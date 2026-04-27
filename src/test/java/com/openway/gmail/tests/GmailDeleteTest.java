@@ -12,12 +12,6 @@ import com.openway.gmail.config.TestConfig;
 import com.openway.gmail.pages.InboxPage;
 import com.openway.gmail.pages.LoginPage;
 
-/**
- * Automated tests for Gmail mail deletion — OpenWay Task Scenario A.
- *
- * Covers TC-DEL-001 (delete single) and TC-DEL-002 (bulk delete).
- * Remaining test cases (TC-DEL-004 to TC-DEL-020) are documented for manual execution.
- */
 public class GmailDeleteTest extends BaseTest {
 
     private LoginPage loginPage;
@@ -39,16 +33,6 @@ public class GmailDeleteTest extends BaseTest {
         }
     }
 
-    /**
-     * TC-DEL-001: Delete a single email from Inbox.
-     *
-     * Steps:
-     * 1. Navigate to Inbox
-     * 2. Record initial email count
-     * 3. Select the first email checkbox
-     * 4. Click the Delete toolbar button
-     * 5. Verify count decreased by 1 and toast notification appeared
-     */
     @Test(priority = 1, description = "TC-DEL-001: Delete a single email from Inbox")
     public void testDeleteSingleEmail() {
         logger.info("=== TC-DEL-001: Delete Single Email ===");
@@ -79,16 +63,6 @@ public class GmailDeleteTest extends BaseTest {
         logger.info("TC-DEL-001 PASSED: Single email deleted successfully.");
     }
 
-    /**
-     * TC-DEL-002: Bulk delete multiple emails from Inbox.
-     *
-     * Steps:
-     * 1. Navigate to Inbox
-     * 2. Record initial email count
-     * 3. Select 2 email checkboxes atomically (single JS call)
-     * 4. Click the Delete toolbar button
-     * 5. Verify count decreased by at least 2
-     */
     @Test(priority = 2, dependsOnMethods = "testDeleteSingleEmail",
             description = "TC-DEL-002: Bulk delete multiple emails")
     public void testBulkDeleteEmails() {
